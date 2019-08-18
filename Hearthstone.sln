@@ -1,1 +1,717 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+namespace Hearthstone
+{
+    public partial class Form1 : Form
+    {
+        public void B(int x) { }
+        public Form1()
+        {
+            InitializeComponent();
+            this.WindowState = FormWindowState.Maximized;
+            this.Size = new Size(1382, 744);
+            MessageBox.Show(this.Width.ToString());
+            button1.Size = new Size(Width / 4, Height / 4);
+            button1.Location = new Point(Width / 2 - button1.Width / 2, Height / 2 - button1.Height / 2);
+            Stack<Card> Deck;
+            int[] k = new int[10];
+            Player P1 = new Player(new Class.Warrior(), new Deck(new List<Card>()));
+            Player P2 = new Player(new Priest(), new Deck(new List<Card>()));
+            Match TMatch = new Match(P1, P2);
+        }
+        public 
+        private void button1_Click(object sender, EventArgs e)
+        {
+            this.Controls.Remove(button1);
+            Button End_Turn = new Button();
+            this.Controls.Add(End_Turn);
+            End_Turn.Size = new Size(100, 50);
+            End_Turn.Location = new Point(this.Width - End_Turn.Width, this.Height / 2 - End_Turn.Height / 2);
+            End_Turn.Text = "End Turn!";
+            Graphics line = CreateGraphics();
+            Pen Black_Pen = new Pen(Color.Black);
+            line.DrawLine(Black_Pen, 0, Height / 2, End_Turn.Location.X, Height / 2);
+            line.DrawLine(Black_Pen, Width / 6, Height, Width / 6, Height - Height / 5);
+            line.DrawLine(Black_Pen, Width / 6, Height - Height / 5, Width - Width / 6, Height - Height / 5);
+            line.DrawLine(Black_Pen, Width - Width / 6, Height - Height / 5, Width - Width / 6, Height);
+            line.DrawLine(Black_Pen, Width / 6, 0, Width / 6, Height / 5);
+            line.DrawLine(Black_Pen, Width / 6, Height / 5, Width - Width / 6, Height / 5);
+            line.DrawLine(Black_Pen, Width - Width / 6, Height / 5, Width - Width / 6, 0);
+            Player P1 = new Player(new Warlock(), new Deck(new List<Card>()));
+            Player P2 = new Player(new Paladin(), new Deck(new List<Card>()));
+        }
+    }
+    static class Game
+    {
+        readonly static public List<Card> Neutral_Cards;
+        readonly static public List<Card> Druid_Cards;
+        readonly static public List<Card> Warlock_Cards;
+        readonly static public List<Card> Mage_Cards;
+        readonly static public List<Card> Rogue_Cards;
+        readonly static public List<Card> Hunter_Cards;
+        readonly static public List<Card> Warrior_Cards;
+        readonly static public List<Card> Paladin_Cards;
+        readonly static public List<Card> Priest_Cards;
+        readonly static public List<Card> Shaman_Cards;
+        #region Classes
+        class Warrior : Class
+        {
+            public Warrior() : base()
+            {
+                Cards = Game.Neutral_Cards; Cards.AddRange(Game.Warrior_Cards);
+            }
+            public override void Hero_Power() { Armor += 2; }
+            public override List<Card> Cards { get; set; }
+        }
+        class Priest : Class
+        {
+            public Priest() : base() { }
+            public override void Hero_Power()
+            {
+            }
+        }
+        class Warlock : Class
+        {
+            public Warlock() : base() { }
+            public override void Hero_Power() { this.Owner.Draw(); this.Take_Damage(2); }
+        }
+        class Paladin : Class
+        {
+            public override void Hero_Power()
+            {
+                this.Owner.Summon(new Game.SilverHand_Recruit());
+            }
+        }
+        class Hunter : Class
+        {
+            public override void Hero_Power() {.Owner.Opponent.hero.Take_Damage(2); }
+        }
+        class Rogue : Class
+        {
+            public override void Hero_Power() {Owner.hero.Equip(new WickedDagger()); }
+        }
+        class Druid : Class
+        {
+            public override void Hero_Power()
+            {
+                Owner.hero.Armor += 1;
+                Owner.hero.Attack += 1;//make sure it goes down at the end of the turn
+                Match.AETE += delegate { Owner.hero.Attack -= 1; };
+                
+            }
+        }
+        #endregion
+        #region Minions
+        public class Plant : Minion
+        {
+            public Plant() : base(1, 1, 1, Minion.Race.None) { } 
+        }
+        public class Savannah_Highmane : Minion
+        {
+            public Savannah_Highmane() : base(6, 5, 6, Race.Beast)
+            {
+                DeathRattle += delegate
+                {
+                    Owner.Summon(new Hyena());
+                    Owner.Summon(new Hyena());
+                };
+            }
+        }
+        public class SilverHand_Recruit : Minion
+        {
+            public SilverHand_Recruit() : base(1, 1, 1, Race.None) { }
+        }
+        public class Hyena : Minion
+        {
+            public Hyena() : base(2, 2, 2, Race.Beast) { }
+        }
+        public class FungleMancer : Minion
+        {
+            public FungleMancer() : base(2, 2, 5, Race.None)
+            {
+                BattleCry += delegate
+                {
+                    foreach (Minion M in GetAdjacent())//The Array doesn't contain null
+                        M.Buff(2, 2);
+                };
+            }
+        }
+        public class PlatedBeetle : Minion
+        {
+            public PlatedBeetle() : base(2, 3, 3, Race.Beast)
+            {
+                DeathRattle += delegate { Owner.hero.Armor += 3; };
+            }
+        }
+        #endregion
+        #region Spells
+        public class Naturalize : Spell
+        {
+            public Naturalize() : base(1, Class.ClassName.Druid, delegate (Minion M) { M.Destroyed(); M.Owner.Opponent.Draw(2); })
+            public override void Spell_Effect()
+            {
+                Owner.Opponent.Draw(2);
+            }
+        }
+        public class ArcaneIntellect : Spell
+        {
+            public ArcaneIntellect() : base(3,Class.ClassName.Mage)
+        }
+        #endregion
+        #region Weapons
+        public class Supercollider : Weapon
+        {
+            public Supercollider() : base(1, 3, 5)
+            {
+                Owner.hero.OnAttack = delegate (IOnBoard Target)
+                {
+                    if (Target.GetType() != typeof(Minion))
+                        return;
+                    foreach (Minion M in (Target as Minion).GetAdjacent())
+                        Target.Attack_Target(M);
+                };
+            }
+        }
+        public class GoreHowl : Weapon // Finish
+        {
+            public GoreHowl() : base(7, 1, 7)
+            {
+                Wielder.OnAttack = delegate { GiveAttack(Attack-1); };
+            }
+        }
+        public class FieryWarAxe : Weapon
+        {
+            public FieryWarAxe() : base(3, 2, 3)
+            {
+            }
+        }
+        public class WickedDagger : Weapon
+        {
+            public WickedDagger() : base(1, 2, 1)
+            {
+
+            }
+        }
+        #endregion
+    }
+    class Match
+    {
+        public static Player P1;
+        public static Player P2;
+        public static Player CurrentPlayer = P1;
+        public static Action AETE;// find a way to remove delegates(for example : applying stealth that expires at the end of the turn)
+        private static int Turn
+        {
+            get { return Turn; }
+            set
+            {
+                Turn = value;
+                switch (Turn % 2)
+                {
+                    case 0:
+                        CurrentPlayer = P1; break;
+                    case 1:
+                        CurrentPlayer = P2; break;
+                }
+            }
+        }
+        static void EndTurn() { AETE(); Turn++; }//Activate all EndTurn Delegates;
+        public List<Player> players = new List<Player>(2);//finish inserting all players to the list
+        public Match(Player Player1, Player Player2)
+        {
+            P1 = new Player(Player1.hero, Player1.Deck);
+            P2 = new Player(Player2.hero, Player2.Deck);
+            Turn = 0;
+        }
+        public void End_Turn()
+        {
+            AETE();
+            Turn++;
+        }
+        public IOnBoard GetTarget()//I Need To Change That
+        {
+            return P1.hero;//I need to change it
+            //I need to Link Ionboard cards to button and then wait for a click, once occured return the card of the clicked button
+        }
+    }
+    class Player
+    {
+        public Hero hero;
+        public Deck Deck;
+        bool Iturn;
+        public Player(Hero Hero, Deck Deck)
+        {
+            this.hero = Hero;
+            this.Deck = Deck;
+        }
+        public void Draw(int CardsToDraw)
+        {
+            Card Drawn_Card = this.Deck.Pop();//לבדוק האם הרשימה נדחסת או שזה נשאר ריק
+            for (int i = 0; i < this.Hand.Count; i++)
+                if (this.Hand[i] == null) 
+                    this.Hand[i] = Drawn_Card;
+            CardsToDraw--;
+            if (CardsToDraw > 0)
+                Draw(CardsToDraw);
+        }
+        public void Draw()
+        {
+            Card Drawn_Card = this.Deck.Pop();//לבדוק האם הרשימה נדחסת או שזה נשאר ריק
+            if (Hand[this.Hand.Capacity - 1] != null)
+                return;
+            for (int i = 0; i <= this.Hand.Count; i++)
+                if (this.Hand[i] == null)
+                    this.Hand[i] = Drawn_Card;
+        }
+        public void Summon(Minion minion)
+        {
+            if (OnBoard_Minions[OnBoard_Minions.Capacity - 1] != null)
+                return;
+            Match.AETE += minion.e
+            for (int i = 0; i < OnBoard_Minions.Capacity; i++)
+                if (OnBoard_Minions[i] == null)
+                    OnBoard_Minions[i] = minion;
+        }
+        public void Victory() { MessageBox.Show(this.Name + " Won!"); }
+        public void DisCard()
+        {
+            if (this.Hand[0] == null)
+                return;
+            Random r = new Random();
+            this.Hand.RemoveAt(r.Next(0, this.Hand.Count));
+            return;
+        }
+        public void AddToDeck(Card card) { this.Deck.Push(card); }
+        public void Recruit()
+        {
+
+        }
+        public void Hero_Power()
+        {
+            if (Current_Mana < 2)
+                return;
+            this.hero.Hero_Power();
+        }
+        public void Discover()
+        {
+
+        }
+        public IOnBoard PickTarget()
+        {
+            return hero;
+        }
+        public int Mana_Crystals;
+        public int Current_Mana;
+        public string Name;
+        public Player Opponent;
+        public List<Minion> OnBoard_Minions = new List<Minion>(7);//    למצוא אובייקט מתאים יותר שדוחס את הערכים בלי מרווחים(מ0) .ץ
+        public List<Card> Hand = new List<Card>(10);//          למצוא אובייקט מתאים יותר שדוחס את הערכים בלי מרווחים(מ0) .ץ
+    }
+    interface IOnBoard
+    {
+        Player Owner { get; }
+        int Attack { get; set; }
+        int Current_Health { get; set; }
+        int Max_Health { get; set; }
+        Action<IOnBoard> OnAttack { get; set; }
+        void Attack_Target(IOnBoard Target);
+        void Take_Damage(int Damage);
+        void Heal(int Healing);
+        void Destroyed();
+        #region Traits
+        bool Poisonous { get; set; }
+        bool WindFury { get; set; }
+        #endregion
+    }
+    interface IProperty
+    {
+        Player Owner { get; set; }
+    }
+    interface Card
+    {
+        int HandIndex { get; set; }
+        Type Cardtype { get; }
+        Action Play_Card { get; set; }
+        bool PlayAble { get; set; }// card color will be set to green;
+        bool SEOP { get; set; }//Special Effects On Play(card color will be set to orange if true) 
+        int Cost { get; set; }
+        Player Owner { get; set; }
+        Hero Class { get; set; }
+    }
+    static class StringExtension
+    {
+        public static int ToInt(this string S) { return int.Parse(S); }
+    }
+    class Deck : Stack<Card>, IProperty
+    {
+        public Player Owner { get; set; }
+        Stack<Card> ThisDeck;
+        public Deck(IEnumerable<Card> S)
+        {
+            ThisDeck = new Stack<Card>(S);
+            Shuffle_Deck();
+        }
+        public void Shuffle_Deck()
+        {
+            Card[] Deck_Cards = new Card[ThisDeck.Count];
+            Random r = new Random();
+            for (int i = 0; i < ThisDeck.Count; i++)
+            {
+                Card C = ThisDeck.Pop();
+                while (true)
+                {
+                    int N = r.Next(0, ThisDeck.Count);
+                    if (Deck_Cards[N] != null)
+                    {
+                        Deck_Cards[N] = C;
+                        break;
+                    }
+                }
+            }
+            for (int i = 0; i < Deck_Cards.Length; i++)
+                ThisDeck.Push(Deck_Cards[i]);
+        }
+        public Card Draw(Type T)//Find a way to get lambda expression and return only cards that meet the requirement, such as only minion with 3 or less attack//Return the first Occurence of a card that is the given type
+        {
+            Stack<Card> Temp = new Stack<Card>();
+            while(ThisDeck.Count != 0)
+            {
+                if (T == ThisDeck.Peek().GetType())
+                {
+                    Card ToReturn = ThisDeck.Pop();
+                    while (Temp.Count != 0)
+                        ThisDeck.Push(Temp.Pop());
+                    return ToReturn;
+                }
+                Temp.Push(ThisDeck.Pop());
+            }
+            while (Temp.Count != 0)
+                ThisDeck.Push(Temp.Pop());
+            return null;
+        }
+        public Card Draw()
+        {
+            if (ThisDeck.Count > 0)
+                return ThisDeck.Pop();
+            DrawFatigue();
+            return null;
+        }
+        int FatigueCount = 1;
+        void DrawFatigue() { Owner.hero.Take_Damage(FatigueCount); FatigueCount++;int s = "s".toin }
+    }
+    class Spell : Card
+    {
+        public Player Owner { get; set; }
+        public Class.ClassName className { get; }
+        public int Cost { get;}
+        public int HandIndex { get; set; }
+        public bool SEOP { get; set; }
+        public bool PlayAble { get; }
+        public Action Effect;//
+        public void Play_Card()
+        {
+            this.Owner.Current_Mana -= this.Cost;
+            this.Spell_Effect();
+        }
+        public Spell(int Cost, Class.ClassName className,Action Effect)
+        {
+            this.Cost = Cost;
+            this.className = className;
+            this.Effect = Effect;
+        }
+    }
+    abstract class Minion : IOnBoard
+    {
+        #region MinionCard
+        public struct MinionCard
+        {
+            public Card card { get; }
+            public int Attack { get; internal set; }
+            public int Health { get;internal set; }
+            public int Cost { get;internal set; }
+        }
+        public void HandBuff(int AttackBuff,int HealthBuff)
+        {
+            ToCard.Attack += AttackBuff;
+            ToCard.Health += HealthBuff;
+        }
+        public void ChangeCost(int NewCost)
+        {
+            ToCard.Cost = NewCost;
+        }
+#endregion
+        #region Stats
+        public int Cost;
+        public int Max_Health { get; set; }
+        public int Current_Health { get; set; }
+        public int Attack { get; set; }
+        #endregion
+        #region IonBoard Implementation
+        public Player Owner { get; set; }
+        public Action<IOnBoard> OnAttack { get; set; }
+        public void Take_Damage(int Damage)
+        {
+            if (Devine_Shield) { Devine_Shield = false; return; }
+            Current_Health -= Damage;
+            if (Current_Health <= 0)
+                this.Destroyed();
+        }
+        public void Heal(int Healing)
+        {
+            Current_Health += Healing;
+            if (Current_Health > Max_Health)
+                Current_Health = Max_Health;
+        }
+        public void Attack_Target(IOnBoard Target)
+        {
+            OnAttack(Target);
+            Target.Take_Damage(Attack);
+            Take_Damage(Target.Attack);
+        }
+        public void Destroyed() { DeathRattle(); Owner.OnBoard_Minions.RemoveAt(Board_Position); }
+        #endregion
+        #region Traits
+        public bool WindFury { get; set; }
+        public bool Poisonous { get; set; }
+        public bool Devine_Shield = false;
+        public bool Rush = false;
+        public bool Charge = false;
+        public bool Stealth = false;
+        public bool UnTargetAble_H_S = false;//UnTargetAble by hero powers and spells
+        public bool Taunt = false;
+        public int SpellDamage = 0;
+        public bool LifeSteal = false;
+        #endregion
+        #region Events
+        public Action OverKill;
+        public Action DeathRattle;
+        public Action StartofTurnEffect;
+        public Action EndofTurnEffect;
+        public Action BattleCry;
+        #endregion
+        public MinionCard ToCard;
+        public enum Race
+        {
+            None,
+            Beast,
+            Demon,
+            Dragon,
+            Elemental,
+            Mech,
+            Murloc,
+            Pirate,
+            Totem
+        }
+        public Race race;
+        public int Board_Position;
+        public Minion[] GetAdjacent()//Arr[0] -> Minion on Left | Arr[1] -> Minion on Right
+        {
+            if(Board_Position>0)
+            {
+                if (Board_Position < 7&& Owner.OnBoard_Minions[Board_Position + 1] != null)
+                    return new Minion[] { Owner.OnBoard_Minions[Board_Position - 1], Owner.OnBoard_Minions[Board_Position + 1] };
+                return new Minion[] { Owner.OnBoard_Minions[Board_Position - 1] };
+            }
+            if(Owner.OnBoard_Minions[Board_Position + 1] != null)
+                return new Minion[] {Owner.OnBoard_Minions[Board_Position + 1] };
+            return new Minion[] { };
+        }
+        public void Gain_Health(int HealthBoost)
+        {
+            Max_Health += HealthBoost;
+            Current_Health += HealthBoost;
+        } //I Want To Make these function public and Convert attack and current/max health to readonly, and let themm be modified only in these methods
+        public void Gain_Attack(int AttackBoost)
+        {
+            Attack += AttackBoost;
+        } //I Want To Make these function public and Convert attack and current/max health to readonly, and let themm be modified only in these methods
+        public void Buff(int Health, int Attack)
+        {
+            this.Max_Health += Health;
+            this.Current_Health += Health;
+            this.Attack += Attack;            
+        }
+        public void Adapt()
+        {
+            int adapt_num = 10;
+            int adapt = new Random().Next(0, adapt_num);
+            switch (adapt)
+            {
+                case 0:
+                    WindFury = true;
+                    break;
+                case 1:
+                    Taunt = true;
+                    break;
+                case 2:
+                    DeathRattle += delegate { Owner.Summon(new Game.Plant()); Owner.Summon(new Game.Plant()); };
+                    break;
+                case 3:
+                    Gain_Attack(3);
+                    break;
+                case 4:
+                    Gain_Health(3);
+                    break;
+                case 5:
+                    Buff(1, 1);break;
+                case 6:
+                    Poisonous = true;break;
+                case 7:
+                    UnTargetAble_H_S = true;break;
+                case 8://FINISH THIS, supposed to be gain stealth untill the end of the turn,NOT WORKING, FIND WAY TO REMOVE FIRST DELEGATE AT THE END OF THE TURN
+                    Stealth = true;
+                    Action D = delegate { Stealth = false; Match.AETE -= delegate { Stealth = false; }; };
+                    Match.AETE += D; ;break;//probably not working, find a way to remove the delegate at the end of the turn
+                case 9:
+                    Devine_Shield = true;break;
+            }
+        }
+        public Minion(int Attack, int Health, int Cost, Race race = Race.None)
+        {
+            this.Attack = Attack;
+            this.Current_Health = Health;
+            this.Cost = Cost;
+            this.race = race;
+        }
+    }
+    abstract class Class
+    {
+        public Player Owner;
+        public enum ClassName// To Identify class without giving it access to class itself(for example :Minion implementation)
+        {
+            Druid,
+            Hunter,
+            Mage,
+            Neutral,
+            Paladin,
+            Priest,
+            Rogue,
+            Shaman,
+            Warlock
+        }
+        public abstract List<Card> Cards { get; set; }
+        public virtual void Hero_Power() { }
+    }
+    abstract class Hero : IOnBoard 
+    {
+        public Hero()
+        {
+            OnAttack = delegate
+            {
+                if (weapon != null)
+                    weapon.Durability--;
+            };
+        }
+        #region IOnBoard Implementation
+        public Player Owner { get; }
+        public int Attack { get; set; }
+        public int Current_Health {
+            get { return Current_Health; }
+            set { Current_Health = value; if (value <= 0) Destroyed(); }
+        }
+        public int Max_Health { get; set; }
+        public Action<IOnBoard> OnAttack { get; set; }//Maybe add that to the weapon itself
+        public void Attack_Target(IOnBoard Target)
+        {
+            OnAttack(Target);
+            Take_Damage(Target.Attack);
+            Target.Take_Damage(Attack);
+        }
+        public virtual void Take_Damage(int Damage)
+        {
+            if (Immune)
+                return;
+            if(Damage>Armor)
+            {
+                Armor -=Armor;
+                Damage -= Armor;
+            }
+            else
+            {
+                Armor -= Damage;
+                return;
+            }
+            Current_Health -= Damage;//Trigger Defeat Effect on Propery Set;
+        }
+        public void Heal(int Healing)
+        {
+            if (Max_Health - Current_Health > Healing)
+            {
+                Current_Health += Max_Health - Current_Health;
+                return;
+            }
+            Current_Health += Healing;
+        }
+        public void Destroyed()
+        {
+            Owner.Opponent.Victory();
+        }
+        #region Traits
+        public bool Poisonous { get; set; }
+        public bool WindFury { get; set; }
+        public bool Immune = false;
+        #endregion
+        #endregion
+        public Class @class;
+        public Weapon weapon = null;
+        public int Armor;
+        public void Equip(Weapon weapon)
+        {
+            this.weapon = weapon;
+        }
+        public void UnEquip()
+        {
+            weapon = null;
+        }
+        public void Hero_Power()
+        {
+            @class.Hero_Power();
+        }
+    }
+    abstract class Weapon//Find A way to apply weapon effect on hero while wielded instead of when equiped and destroyed
+    {
+        public readonly Card ToCard;//Represent how the Weapon Behaved as A Card
+        public Hero Wielder;
+        public int Durability { get; private set; }
+        public int Attack { get; private set; }
+        #region Weapon Buffs
+        public void GiveAttack(int AttackBonus)
+        {
+            Attack += AttackBonus;
+        }
+        public void GiveDurability(int DurabilityBonus)
+        {
+            Durability += DurabilityBonus;
+        }
+        public void Buff(int AttackBonus, int DurabilityBonus)
+        {
+            Attack += AttackBonus;
+            Durability += DurabilityBonus;
+        }
+        #endregion
+        public void Destroy()
+        {
+            Wielder.UnEquip();
+        }
+        public Weapon(int Attack, int Durability,int Cost)
+        {
+            this.Attack = Attack;
+            this.Durability = Durability;
+            ToCard.Cost = Cost;
+            ToCard.Owner = Match.CurrentPlayer;
+            Wielder.OnAttack += delegate { Durability--; };
+            ToCard.Play_Card = delegate { ToCard.Owner.hero.Equip(ToCard.); };
+        }
+    }
+}
+
+
+
 
